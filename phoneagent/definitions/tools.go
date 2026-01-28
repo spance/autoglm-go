@@ -36,7 +36,7 @@ func coordinateParam(description string) ParamProperty {
 }
 
 // String parameter (reusable)
-func stringParam(description string, required bool) ParamProperty {
+func stringParam(description string) ParamProperty {
 	return ParamProperty{
 		Type:        "string",
 		Description: description,
@@ -82,7 +82,7 @@ func createTapTool() openai.Tool {
 				Type: "object",
 				Properties: map[string]ParamProperty{
 					"element": coordinateParam("Coordinates of the tap point [x, y]"),
-					"message": stringParam("Optional message for sensitive operations (payments, privacy, etc.)", false),
+					"message": stringParam("Optional message for sensitive operations (payments, privacy, etc.)"),
 				},
 				Required: []string{"element"},
 			},
@@ -99,7 +99,7 @@ func createTypeTextTool() openai.Tool {
 			Parameters: FunctionParams{
 				Type: "object",
 				Properties: map[string]ParamProperty{
-					"text": stringParam("The text to input", true),
+					"text": stringParam("The text to input"),
 				},
 				Required: []string{"text"},
 			},
@@ -168,7 +168,7 @@ func createLaunchAppTool() openai.Tool {
 			Parameters: FunctionParams{
 				Type: "object",
 				Properties: map[string]ParamProperty{
-					"app": stringParam("Name of the app to launch", true),
+					"app": stringParam("Name of the app to launch"),
 				},
 				Required: []string{"app"},
 			},
@@ -229,7 +229,7 @@ func createTakeOverTool() openai.Tool {
 			Parameters: FunctionParams{
 				Type: "object",
 				Properties: map[string]ParamProperty{
-					"message": stringParam("Message explaining what user needs to do", true),
+					"message": stringParam("Message explaining what user needs to do"),
 				},
 				Required: []string{"message"},
 			},
@@ -246,7 +246,7 @@ func createInteractTool() openai.Tool {
 			Parameters: FunctionParams{
 				Type: "object",
 				Properties: map[string]ParamProperty{
-					"message": stringParam("Description of the interaction needed", false),
+					"message": stringParam("Description of the interaction needed"),
 				},
 			},
 		},
@@ -262,7 +262,7 @@ func createRecordNoteTool() openai.Tool {
 			Parameters: FunctionParams{
 				Type: "object",
 				Properties: map[string]ParamProperty{
-					"message": stringParam("Content to record", false),
+					"message": stringParam("Content to record"),
 				},
 			},
 		},
@@ -278,7 +278,7 @@ func createCallAPITool() openai.Tool {
 			Parameters: FunctionParams{
 				Type: "object",
 				Properties: map[string]ParamProperty{
-					"instruction": stringParam("Instruction for what to summarize or analyze", true),
+					"instruction": stringParam("Instruction for what to summarize or analyze"),
 				},
 				Required: []string{"instruction"},
 			},
@@ -295,7 +295,7 @@ func createFinishTaskTool() openai.Tool {
 			Parameters: FunctionParams{
 				Type: "object",
 				Properties: map[string]ParamProperty{
-					"message": stringParam("Completion message explaining what was accomplished", true),
+					"message": stringParam("Completion message explaining what was accomplished"),
 				},
 				Required: []string{"message"},
 			},
