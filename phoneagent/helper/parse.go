@@ -1,12 +1,10 @@
 package helper
 
 import (
-	"errors"
+	"encoding/json"
 	"fmt"
-	"regexp"
-	"strconv"
-	"strings"
 
+	"github.com/sashabaranov/go-openai"
 	logs "github.com/sirupsen/logrus"
 )
 
@@ -19,127 +17,83 @@ type ActionResult struct {
 	RequiresConfirmation bool
 }
 
-func ParseAction(rawActionStr string) (Action, error) {
-	logs.Debugf("begin to parse action: %s", rawActionStr)
-
-	rawActionStr = strings.TrimSpace(rawActionStr)
-
-	// case 1: do(action=...)
-	if strings.HasPrefix(rawActionStr, "do(") {
-		action, err := parseDoCall(rawActionStr)
-		if err != nil {
-			logs.Errorf("failed to parse do() action, rawActionStr: %s, err: %v", rawActionStr, err)
-			return nil, fmt.Errorf("failed to parse do() action: %w", err)
-		}
-		return action, nil
-	}
-
-	// case 2: finish(message="...")
-	if strings.HasPrefix(rawActionStr, "finish") {
-		msg, err := parseFinishMessage(rawActionStr)
-		if err != nil {
-			return nil, err
-		}
-
-		return Action{
-			"_metadata": "finish",
-			"message":   msg,
-		}, nil
-	}
-	return nil, fmt.Errorf("failed to parse action: %s", rawActionStr)
-}
-
-func parseDoCall(expr string) (Action, error) {
-	// 去掉 do( 和 )
-	if !strings.HasPrefix(expr, "do(") || !strings.HasSuffix(expr, ")") {
-		return nil, errors.New("invalid do() syntax")
-	}
-
-	body := strings.TrimSuffix(strings.TrimPrefix(expr, "do("), ")")
+// ParseFunctionCall converts OpenAI function call to Action format
+func ParseFunctionCall(toolCall openai.ToolCall) (Action, error) {
+	logs.Debugf("begin to parse function call: %s(%s)", toolCall.Function.Name, toolCall.Function.Arguments)
 
 	action := Action{
 		"_metadata": "do",
 	}
 
-	if strings.TrimSpace(body) == "" {
+	// Parse function arguments
+	var args map[string]interface{}
+	if err := json.Unmarshal([]byte(toolCall.Function.Arguments), &args); err != nil {
+		return nil, fmt.Errorf("failed to parse function arguments: %w", err)
+	}
+
+	// Map function name to action name
+	actionName, err := mapFunctionToAction(toolCall.Function.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	// Handle finish task specially
+	if actionName == "finish" {
+		action["_metadata"] = "finish"
+		if msg, ok := args["message"].(string); ok {
+			action["message"] = msg
+		} else {
+			action["message"] = "Task completed"
+		}
 		return action, nil
 	}
 
-	parts := strings.Split(body, ", ")
+	// Set action name
+	action["action"] = actionName
 
-	for _, part := range parts {
-		kv := strings.SplitN(part, "=", 2)
-		if len(kv) != 2 {
-			return nil, fmt.Errorf("invalid argument: %s", part)
+	// Copy all arguments
+	for k, v := range args {
+		// Convert array coordinates from float64 to int
+		if k == "element" || k == "start" || k == "end" {
+			if arr, ok := v.([]interface{}); ok {
+				intArr := make([]int, len(arr))
+				for i, val := range arr {
+					if fval, ok := val.(float64); ok {
+						intArr[i] = int(fval)
+					}
+				}
+				action[k] = intArr
+				continue
+			}
 		}
-
-		key := strings.TrimSpace(kv[0])
-		valStr := strings.TrimSpace(kv[1])
-
-		val, err := parseLiteral(valStr)
-		if err != nil {
-			return nil, fmt.Errorf("invalid value for %s: %w", key, err)
-		}
-
-		action[key] = val
+		action[k] = v
 	}
+
 	return action, nil
 }
 
-var messageRe = regexp.MustCompile(`message="((?:\\.|[^"])*)"`)
-
-func parseFinishMessage(s string) (string, error) {
-	matches := messageRe.FindStringSubmatch(s)
-	if len(matches) < 2 {
-		return "", errors.New("message not found")
-	}
-	return matches[1], nil
-}
-
-func parseLiteral(s string) (any, error) {
-	logs.Debugf("begin to parse literal: %s", s)
-	// string
-	if strings.HasPrefix(s, `"`) && strings.HasSuffix(s, `"`) {
-		return s[1 : len(s)-1], nil
-	}
-
-	// bool
-	if s == "true" {
-		return true, nil
-	}
-	if s == "false" {
-		return false, nil
+// mapFunctionToAction maps function call names to internal action names
+func mapFunctionToAction(funcName string) (string, error) {
+	mapping := map[string]string{
+		"tap":          "Tap",
+		"type_text":    "Type",
+		"swipe":        "Swipe",
+		"long_press":   "Long Press",
+		"double_tap":   "Double Tap",
+		"launch_app":   "Launch",
+		"press_back":   "Back",
+		"press_home":   "Home",
+		"wait":         "Wait",
+		"take_over":    "Take_over",
+		"interact":     "Interact",
+		"record_note":  "Note",
+		"call_api":     "Call_API",
+		"finish_task":  "finish",
 	}
 
-	// int[]
-	if strings.HasPrefix(s, "[") && strings.HasSuffix(s, "]") {
-		content := strings.TrimSpace(s[1 : len(s)-1])
-		if content == "" {
-			return []int{}, nil
-		}
-
-		parts := strings.Split(content, ",")
-		result := make([]int, 0, len(parts))
-
-		for _, p := range parts {
-			v, err := strconv.Atoi(strings.TrimSpace(p))
-			if err != nil {
-				return nil, fmt.Errorf("invalid int in array: %s", p)
-			}
-			result = append(result, v)
-		}
-		return result, nil
+	if actionName, ok := mapping[funcName]; ok {
+		return actionName, nil
 	}
 
-	// int
-	if i, err := strconv.Atoi(strings.TrimSpace(s)); err == nil {
-		return i, nil
-	}
-
-	// float
-	if f, err := strconv.ParseFloat(strings.TrimSpace(s), 64); err == nil {
-		return f, nil
-	}
-
-	return nil, fmt.Errorf("unsupported literal: %s", s)
+	return "", fmt.Errorf("unknown function name: %s", funcName)
 }

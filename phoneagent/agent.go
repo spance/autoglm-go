@@ -127,24 +127,44 @@ func (r *PhoneAgent) ExecuteStep(ctx context.Context, userPrompt string, isFirst
 
 	logs.Debugf("💭 model response: %s", utils.JsonString(response))
 
-	action, err := helper.ParseAction(response.Action)
-	if err != nil {
-		logs.Errorf("failed to parse action, err: %v", err)
+	// Parse action from function call
+	var action helper.Action
+	if len(response.ToolCalls) > 0 {
+		action, err = helper.ParseFunctionCall(response.ToolCalls[0])
+		if err != nil {
+			logs.Errorf("failed to parse function call, err: %v", err)
+			return &StepResult{
+				Success:  false,
+				Finished: false,
+				Message:  fmt.Sprintf("failed to parse function call, err: %v", err),
+			}, nil
+		}
+	} else {
+		// No tool call, might be a thinking step or error
+		logs.Warn("No tool call in response")
 		return &StepResult{
 			Success:  false,
 			Finished: false,
-			Message:  fmt.Sprintf("failed to parse action, err: %v", err),
+			Message:  "Model did not return a tool call",
 		}, nil
 	}
 
-	// Print thinking process
+	// Print action
 	logs.Info(strings.Repeat("-", 50))
 	logs.Infof("🎯 %s", response.Action)
-	logs.Debugf("resp action: %s \nparsed action:%s", utils.JsonString(response.Action), utils.JsonString(action))
+	logs.Debugf("parsed action: %s", utils.JsonString(action))
 	logs.Info(strings.Repeat("=", 50))
 
 	// Remove image from context to save space
 	r.State[len(r.State)-1] = helper.RemoveImagesFromMessage(r.State[len(r.State)-1])
+
+	// Add assistant message to state (including tool call)
+	assistantMsg := openai.ChatCompletionMessage{
+		Role:      openai.ChatMessageRoleAssistant,
+		Content:   response.Thinking,
+		ToolCalls: response.ToolCalls,
+	}
+	r.State = append(r.State, assistantMsg)
 
 	// Execute action
 	actionResult, err := r.ExecuteAction(ctx, action, screenshot.Width, screenshot.Height)
@@ -152,16 +172,20 @@ func (r *PhoneAgent) ExecuteStep(ctx context.Context, userPrompt string, isFirst
 		logs.Errorf("failed to execute action, err: %v", err)
 		actionResult = helper.ActionResult{
 			Success:      true,
-			ShouldFinish: true,
-			Message:      fmt.Sprintf("Failed to execute action: %v", err),
+			ShouldFinish: false,
+			Message:      fmt.Sprintf("Action execution error: %v", err),
 		}
 	}
 
-	thinkingContent := fmt.Sprintf("<think>%s</think><answer>%s</answer>", response.Thinking, response.Action)
-	r.State = append(r.State, helper.CreateAssistantMessage(thinkingContent))
-
-	// print assistant message
-	helper.PrintChatMessage(&r.State[len(r.State)-1])
+	// Add tool response message to state
+	if len(response.ToolCalls) > 0 {
+		toolMsg := openai.ChatCompletionMessage{
+			Role:       openai.ChatMessageRoleTool,
+			Content:    actionResult.Message,
+			ToolCallID: response.ToolCalls[0].ID,
+		}
+		r.State = append(r.State, toolMsg)
+	}
 
 	if actionResult.ShouldFinish {
 		var displayMsg string
