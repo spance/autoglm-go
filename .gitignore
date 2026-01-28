@@ -20,3 +20,4 @@ debug/
 .env
 .env.local
 .air.conf
+autoglm-go
