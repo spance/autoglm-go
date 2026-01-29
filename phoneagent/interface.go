@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	"autoglm-go/constants"
-	"autoglm-go/phoneagent/android"
-	"autoglm-go/phoneagent/definitions"
-	"autoglm-go/phoneagent/ios"
+	"github.com/spance/autoglm-go/constants"
+	"github.com/spance/autoglm-go/phoneagent/android"
+	"github.com/spance/autoglm-go/phoneagent/definitions"
+	"github.com/spance/autoglm-go/phoneagent/ios"
 )
 
 // DeviceOperator 定义设备操作接口

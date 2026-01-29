@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"autoglm-go/phoneagent/definitions"
-	"autoglm-go/phoneagent/helper"
+	"github.com/spance/autoglm-go/phoneagent/definitions"
+	"github.com/spance/autoglm-go/phoneagent/helper"
 	"github.com/sashabaranov/go-openai"
 	logs "github.com/sirupsen/logrus"
 )

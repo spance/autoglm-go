@@ -1,4 +1,4 @@
-module autoglm-go
+module github.com/spance/autoglm-go
 
 go 1.23
 

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"autoglm-go/constants"
+	"github.com/spance/autoglm-go/constants"
 )
 
 type AgentConfig struct {

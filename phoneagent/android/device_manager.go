@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"autoglm-go/phoneagent/definitions"
+	"github.com/spance/autoglm-go/phoneagent/definitions"
 	logs "github.com/sirupsen/logrus"
 )
 

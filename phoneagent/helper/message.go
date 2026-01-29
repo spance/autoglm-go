@@ -3,8 +3,8 @@ package helper
 import (
 	"fmt"
 
-	"autoglm-go/constants"
-	"autoglm-go/utils"
+	"github.com/spance/autoglm-go/constants"
+	"github.com/spance/autoglm-go/utils"
 	"github.com/sashabaranov/go-openai"
 	logs "github.com/sirupsen/logrus"
 )
