@@ -14,8 +14,8 @@ import (
 	"strings"
 	"time"
 
-	"autoglm-go/constants"
-	"autoglm-go/phoneagent/definitions"
+	"github.com/spance/autoglm-go/constants"
+	"github.com/spance/autoglm-go/phoneagent/definitions"
 	"github.com/google/uuid"
 	logs "github.com/sirupsen/logrus"
 )

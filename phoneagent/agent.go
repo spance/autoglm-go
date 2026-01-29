@@ -9,10 +9,10 @@ import (
 	"strings"
 	"time"
 
-	"autoglm-go/phoneagent/definitions"
-	"autoglm-go/phoneagent/helper"
-	"autoglm-go/phoneagent/llm"
-	"autoglm-go/utils"
+	"github.com/spance/autoglm-go/phoneagent/definitions"
+	"github.com/spance/autoglm-go/phoneagent/helper"
+	"github.com/spance/autoglm-go/phoneagent/llm"
+	"github.com/spance/autoglm-go/utils"
 	"github.com/sashabaranov/go-openai"
 	logs "github.com/sirupsen/logrus"
 )

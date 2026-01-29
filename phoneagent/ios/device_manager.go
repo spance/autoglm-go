@@ -1,7 +1,7 @@
 package ios
 
 import (
-	"autoglm-go/phoneagent/definitions"
+	"github.com/spance/autoglm-go/phoneagent/definitions"
 	"context"
 )
 
