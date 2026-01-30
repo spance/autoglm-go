@@ -169,11 +169,10 @@ func (r *PhoneAgent) ExecuteStep(ctx context.Context, userPrompt string, isFirst
 	}
 
 	// Print action
-	log.Debug().Int("step", r.StepCount).Msgf("🎯 %s", response.Action)
-	log.Debug().Int("step", r.StepCount).Str("action", utils.JsonString(action)).Msg("parsed action")
+	log.Debug().Int("step", r.StepCount).Str("action", response.Action).Str("details", utils.JsonString(action)).Msg("parsed action")
 
 	// Remove image from context to save space
-	r.State[len(r.State)-1] = helper.RemoveImagesFromMessage(r.State[len(r.State)-1])
+	helper.RemoveImagesFromMessage(&r.State[len(r.State)-1])
 
 	// Add assistant message to state (including tool call)
 	assistantMsg := openai.ChatCompletionMessage{

@@ -80,15 +80,16 @@ func GetMessage(key string, lang string) string {
 	return constants.MESSAGES_ZH_MAP[key]
 }
 
-func RemoveImagesFromMessage(message openai.ChatCompletionMessage) openai.ChatCompletionMessage {
-	var multiContent []openai.ChatMessagePart
-	if message.MultiContent != nil {
-		for _, part := range message.MultiContent {
-			if part.Type == openai.ChatMessagePartTypeText {
-				multiContent = append(multiContent, part)
-			}
-		}
-		message.MultiContent = multiContent
+func RemoveImagesFromMessage(message *openai.ChatCompletionMessage) {
+	if message == nil || message.MultiContent == nil {
+		return
 	}
-	return message
+	var multiContent []openai.ChatMessagePart
+	for _, part := range message.MultiContent {
+		// Remove image URLs, keep only text parts
+		if part.Type != openai.ChatMessagePartTypeImageURL {
+			multiContent = append(multiContent, part)
+		}
+	}
+	message.MultiContent = multiContent
 }
