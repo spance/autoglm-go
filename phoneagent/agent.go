@@ -83,8 +83,21 @@ func (r *PhoneAgent) ExecuteStep(ctx context.Context, userPrompt string, isFirst
 	r.StepCount += 1
 
 	device := r.Device
-	screenshot, _ := device.GetScreenshot(ctx, r.AgentConfig.DeviceID)
-	currentApp, _ := device.GetCurrentApp(ctx, r.AgentConfig.DeviceID)
+	screenshot, err := device.GetScreenshot(ctx, r.AgentConfig.DeviceID)
+	if err != nil {
+		log.Error().Int("step", r.StepCount).Err(err).Msg("Failed to get screenshot")
+		return &StepResult{
+			Success:  false,
+			Finished: false,
+			Message:  fmt.Sprintf("Failed to get screenshot: %v", err),
+		}, err
+	}
+
+	currentApp, err := device.GetCurrentApp(ctx, r.AgentConfig.DeviceID)
+	if err != nil {
+		log.Warn().Int("step", r.StepCount).Err(err).Msg("Failed to get current app, continuing anyway")
+		currentApp = "" // Use empty string as fallback
+	}
 
 	if isFirstStep {
 		// system prompt
