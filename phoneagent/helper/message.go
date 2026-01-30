@@ -46,21 +46,21 @@ func CreateUserMessage(text string, imageBase64 *string) openai.ChatCompletionMe
 }
 
 func PrintChatMessage(msg *openai.ChatCompletionMessage, stepCount int) {
-	// 不打印 system prompt
-	if msg.Role == openai.ChatMessageRoleSystem {
-		return
-	}
 	// user 只打印 text
 	if msg.Role == openai.ChatMessageRoleUser {
 		for _, part := range msg.MultiContent {
 			if part.Type == openai.ChatMessagePartTypeText {
-				log.Debug().Int("step", stepCount).Str("msg", part.Text).Msg("👤 user message")
+				log.Debug().Int("step", stepCount).Str("Text", part.Text).Msg("👤 user message")
 			}
 		}
 	}
 	// assistant 打印 content
 	if msg.Role == openai.ChatMessageRoleAssistant {
-		log.Debug().Int("step", stepCount).Str("msg", msg.Content).Msg("🌐 assistant message")
+		log.Debug().Int("step", stepCount).Str("Content", msg.Content).Msg("🌐 assistant message")
+	}
+	// 不打印 system prompt
+	if msg.Role == openai.ChatMessageRoleSystem {
+		return
 	}
 }
 

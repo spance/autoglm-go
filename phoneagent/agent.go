@@ -99,33 +99,40 @@ func (r *PhoneAgent) ExecuteStep(ctx context.Context, userPrompt string, isFirst
 		currentApp = "" // Use empty string as fallback
 	}
 
+	var textContent string
 	if isFirstStep {
 		// system prompt
 		r.State = append(r.State,
 			helper.CreateSystemMessage(r.AgentConfig.GetSystemPrompt()),
 		)
 
-		screenInfo := helper.BuildScreenInfo(currentApp)
-		textContent := fmt.Sprintf("%s\n\n%s", userPrompt, screenInfo)
-
-		// user prompt
-		r.State = append(r.State,
-			helper.CreateUserMessage(textContent, &screenshot.Base64Data),
-		)
+		if len(currentApp) > 0 {
+			screenInfo := helper.BuildScreenInfo(currentApp)
+			textContent = fmt.Sprintf("%s\n\n%s", userPrompt, screenInfo)
+		} else {
+			textContent = userPrompt
+		}
 	} else {
-		screenInfo := helper.BuildScreenInfo(currentApp)
-		textContent := fmt.Sprintf("** Screen Info **\n\n%s", screenInfo)
-
-		// user prompt
-		r.State = append(r.State,
-			helper.CreateUserMessage(textContent, &screenshot.Base64Data),
-		)
+		var sb strings.Builder
+		if len(userPrompt) > 0 {
+			sb.WriteString(userPrompt)
+			sb.WriteString("\n\n")
+		}
+		if len(currentApp) > 0 {
+			screenInfo := helper.BuildScreenInfo(currentApp)
+			sb.WriteString("** Screen Info **\n\n")
+			sb.WriteString(screenInfo)
+		}
+		textContent = sb.String()
 	}
+
+	// user prompt
+	r.State = append(r.State,
+		helper.CreateUserMessage(textContent, &screenshot.Base64Data),
+	)
 
 	// print user message
 	helper.PrintChatMessage(&r.State[len(r.State)-1], r.StepCount)
-
-	log.Debug().Int("step", r.StepCount).Msgf("💭 %s:", helper.GetMessage("thinking", r.AgentConfig.Lang))
 
 	response, err := r.ModelClient.Request(ctx, r.State)
 	if err != nil {
