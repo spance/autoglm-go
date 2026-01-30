@@ -3,10 +3,10 @@ package helper
 import (
 	"fmt"
 
+	"github.com/rs/zerolog/log"
+	"github.com/sashabaranov/go-openai"
 	"github.com/spance/autoglm-go/constants"
 	"github.com/spance/autoglm-go/utils"
-	"github.com/sashabaranov/go-openai"
-	logs "github.com/sirupsen/logrus"
 )
 
 func CreateSystemMessage(content string) openai.ChatCompletionMessage {
@@ -45,7 +45,7 @@ func CreateUserMessage(text string, imageBase64 *string) openai.ChatCompletionMe
 	return msg
 }
 
-func PrintChatMessage(msg *openai.ChatCompletionMessage) {
+func PrintChatMessage(msg *openai.ChatCompletionMessage, stepCount int) {
 	// 不打印 system prompt
 	if msg.Role == openai.ChatMessageRoleSystem {
 		return
@@ -54,13 +54,13 @@ func PrintChatMessage(msg *openai.ChatCompletionMessage) {
 	if msg.Role == openai.ChatMessageRoleUser {
 		for _, part := range msg.MultiContent {
 			if part.Type == openai.ChatMessagePartTypeText {
-				logs.Debugf("👤 user message: %s", part.Text)
+				log.Debug().Int("step", stepCount).Str("msg", part.Text).Msg("👤 user message")
 			}
 		}
 	}
 	// assistant 打印 content
 	if msg.Role == openai.ChatMessageRoleAssistant {
-		logs.Debugf("🌐 assistant message: %s", msg.Content)
+		log.Debug().Int("step", stepCount).Str("msg", msg.Content).Msg("🌐 assistant message")
 	}
 }
 

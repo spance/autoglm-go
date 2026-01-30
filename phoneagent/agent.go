@@ -9,12 +9,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/rs/zerolog/log"
+	"github.com/sashabaranov/go-openai"
 	"github.com/spance/autoglm-go/phoneagent/definitions"
 	"github.com/spance/autoglm-go/phoneagent/helper"
 	"github.com/spance/autoglm-go/phoneagent/llm"
 	"github.com/spance/autoglm-go/utils"
-	"github.com/sashabaranov/go-openai"
-	logs "github.com/sirupsen/logrus"
 )
 
 type PhoneAgent struct {
@@ -49,7 +49,7 @@ type StepResult struct {
 func (r *PhoneAgent) Run(ctx context.Context, task string) (string, error) {
 	result, err := r.ExecuteStep(ctx, task, true)
 	if err != nil {
-		logs.Errorf("Failed to execute step: %v", err)
+		log.Error().Int("step", r.StepCount).Err(err).Msg("Failed to execute step")
 		return "", err
 	}
 	if result.Finished {
@@ -59,7 +59,7 @@ func (r *PhoneAgent) Run(ctx context.Context, task string) (string, error) {
 	for r.StepCount < r.AgentConfig.MaxSteps {
 		result, err = r.ExecuteStep(ctx, "", false)
 		if err != nil {
-			logs.Errorf("Failed to execute step: %v", err)
+			log.Error().Int("step", r.StepCount).Err(err).Msg("Failed to execute step")
 			return "", err
 		}
 		if result.Finished {
@@ -72,7 +72,7 @@ func (r *PhoneAgent) Run(ctx context.Context, task string) (string, error) {
 func (r *PhoneAgent) Step(ctx context.Context, task string) (*StepResult, error) {
 	isFirst := len(r.State) == 0
 	if isFirst && len(task) == 0 {
-		logs.Errorf("task is required for the first step")
+		log.Error().Msg("task is required for the first step")
 		return nil, fmt.Errorf("task is required for the first step")
 	}
 	return r.ExecuteStep(ctx, task, isFirst)
@@ -109,15 +109,13 @@ func (r *PhoneAgent) ExecuteStep(ctx context.Context, userPrompt string, isFirst
 	}
 
 	// print user message
-	helper.PrintChatMessage(&r.State[len(r.State)-1])
+	helper.PrintChatMessage(&r.State[len(r.State)-1], r.StepCount)
 
-	logs.Info(strings.Repeat("=", 50))
-	logs.Infof("💭 %s:", helper.GetMessage("thinking", r.AgentConfig.Lang))
-	logs.Info(strings.Repeat("-", 50))
+	log.Debug().Int("step", r.StepCount).Msgf("💭 %s:", helper.GetMessage("thinking", r.AgentConfig.Lang))
 
 	response, err := r.ModelClient.Request(ctx, r.State)
 	if err != nil {
-		logs.Errorf("failed to get model response, err: %v", err)
+		log.Error().Int("step", r.StepCount).Err(err).Msg("failed to get model response")
 		return &StepResult{
 			Success:  false,
 			Finished: false,
@@ -125,14 +123,14 @@ func (r *PhoneAgent) ExecuteStep(ctx context.Context, userPrompt string, isFirst
 		}, nil
 	}
 
-	logs.Debugf("💭 model response: %s", utils.JsonString(response))
+	log.Trace().Str("response", utils.JsonString(response)).Msg("💭 model response")
 
 	// Parse action from function call
 	var action helper.Action
 	if len(response.ToolCalls) > 0 {
 		action, err = helper.ParseFunctionCall(response.ToolCalls[0])
 		if err != nil {
-			logs.Errorf("failed to parse function call, err: %v", err)
+			log.Error().Int("step", r.StepCount).Err(err).Msg("failed to parse function call")
 			return &StepResult{
 				Success:  false,
 				Finished: false,
@@ -141,7 +139,7 @@ func (r *PhoneAgent) ExecuteStep(ctx context.Context, userPrompt string, isFirst
 		}
 	} else {
 		// No tool call, might be a thinking step or error
-		logs.Warn("No tool call in response")
+		log.Warn().Int("step", r.StepCount).Msg("No tool call in response")
 		return &StepResult{
 			Success:  false,
 			Finished: false,
@@ -150,10 +148,8 @@ func (r *PhoneAgent) ExecuteStep(ctx context.Context, userPrompt string, isFirst
 	}
 
 	// Print action
-	logs.Info(strings.Repeat("-", 50))
-	logs.Infof("🎯 %s", response.Action)
-	logs.Debugf("parsed action: %s", utils.JsonString(action))
-	logs.Info(strings.Repeat("=", 50))
+	log.Debug().Int("step", r.StepCount).Msgf("🎯 %s", response.Action)
+	log.Debug().Int("step", r.StepCount).Str("action", utils.JsonString(action)).Msg("parsed action")
 
 	// Remove image from context to save space
 	r.State[len(r.State)-1] = helper.RemoveImagesFromMessage(r.State[len(r.State)-1])
@@ -169,7 +165,7 @@ func (r *PhoneAgent) ExecuteStep(ctx context.Context, userPrompt string, isFirst
 	// Execute action
 	actionResult, err := r.ExecuteAction(ctx, action, screenshot.Width, screenshot.Height)
 	if err != nil {
-		logs.Errorf("failed to execute action, err: %v", err)
+		log.Error().Int("step", r.StepCount).Err(err).Msg("failed to execute action")
 		actionResult = helper.ActionResult{
 			Success:      true,
 			ShouldFinish: false,
@@ -195,13 +191,7 @@ func (r *PhoneAgent) ExecuteStep(ctx context.Context, userPrompt string, isFirst
 			displayMsg = helper.GetMessage("done", r.AgentConfig.Lang)
 		}
 
-		logs.Info(strings.Repeat("=", 50))
-		logs.Infof(
-			"✅ %s: %s\n",
-			helper.GetMessage("task_completed", r.AgentConfig.Lang),
-			displayMsg,
-		)
-		logs.Info(strings.Repeat("=", 50))
+		log.Debug().Int("step", r.StepCount).Msgf("✅ %s: %s", helper.GetMessage("task_completed", r.AgentConfig.Lang), displayMsg)
 	}
 
 	stepResult := &StepResult{
@@ -287,7 +277,7 @@ func (r *PhoneAgent) handleLaunch(ctx context.Context, action helper.Action, scr
 	}
 	_, err := r.Device.LaunchApp(ctx, appName, r.AgentConfig.DeviceID)
 	if err != nil {
-		logs.Errorf("failed to launch app, err: %v", err)
+		log.Error().Int("step", r.StepCount).Err(err).Msg("failed to launch app")
 		return helper.ActionResult{
 			Success:      false,
 			ShouldFinish: false,
@@ -436,6 +426,7 @@ func (r *PhoneAgent) handleWait(ctx context.Context, action helper.Action, scree
 	durationStr := utils.AnyToString(action["duration"])
 	duration, err := strconv.ParseFloat(strings.ReplaceAll(durationStr, "seconds", ""), 64)
 	if err != nil {
+		log.Warn().Int("step", r.StepCount).Err(err).Msg("failed to parse duration, using default 1.0s")
 		duration = 1.0
 	}
 	time.Sleep(time.Duration(duration) * time.Second)

@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/rs/zerolog/log"
 	"github.com/sashabaranov/go-openai"
-	logs "github.com/sirupsen/logrus"
 )
 
 type Action map[string]any
@@ -19,7 +19,7 @@ type ActionResult struct {
 
 // ParseFunctionCall converts OpenAI function call to Action format
 func ParseFunctionCall(toolCall openai.ToolCall) (Action, error) {
-	logs.Debugf("begin to parse function call: %s(%s)", toolCall.Function.Name, toolCall.Function.Arguments)
+	log.Debug().Str("func", toolCall.Function.Name).Str("args", toolCall.Function.Arguments).Msg("begin to parse function call")
 
 	action := Action{
 		"_metadata": "do",
@@ -75,20 +75,20 @@ func ParseFunctionCall(toolCall openai.ToolCall) (Action, error) {
 // mapFunctionToAction maps function call names to internal action names
 func mapFunctionToAction(funcName string) (string, error) {
 	mapping := map[string]string{
-		"tap":          "Tap",
-		"type_text":    "Type",
-		"swipe":        "Swipe",
-		"long_press":   "Long Press",
-		"double_tap":   "Double Tap",
-		"launch_app":   "Launch",
-		"press_back":   "Back",
-		"press_home":   "Home",
-		"wait":         "Wait",
-		"take_over":    "Take_over",
-		"interact":     "Interact",
-		"record_note":  "Note",
-		"call_api":     "Call_API",
-		"finish_task":  "finish",
+		"tap":         "Tap",
+		"type_text":   "Type",
+		"swipe":       "Swipe",
+		"long_press":  "Long Press",
+		"double_tap":  "Double Tap",
+		"launch_app":  "Launch",
+		"press_back":  "Back",
+		"press_home":  "Home",
+		"wait":        "Wait",
+		"take_over":   "Take_over",
+		"interact":    "Interact",
+		"record_note": "Note",
+		"call_api":    "Call_API",
+		"finish_task": "finish",
 	}
 
 	if actionName, ok := mapping[funcName]; ok {

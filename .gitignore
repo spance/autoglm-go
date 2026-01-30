@@ -20,4 +20,6 @@ debug/
 .env
 .env.local
 .air.conf
+.github/
 autoglm-go
+main

@@ -6,10 +6,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/rs/zerolog/log"
+	"github.com/sashabaranov/go-openai"
 	"github.com/spance/autoglm-go/phoneagent/definitions"
 	"github.com/spance/autoglm-go/phoneagent/helper"
-	"github.com/sashabaranov/go-openai"
-	logs "github.com/sirupsen/logrus"
 )
 
 type ModelClient struct {
@@ -64,7 +64,7 @@ func (c *ModelClient) Request(ctx context.Context, messages []openai.ChatComplet
 
 	resp, err := c.client.CreateChatCompletion(ctx, req)
 	if err != nil {
-		logs.Errorf("CreateChatCompletion error: %v", err)
+		log.Error().Err(err).Msg("CreateChatCompletion error")
 		return nil, err
 	}
 
@@ -82,14 +82,14 @@ func (c *ModelClient) Request(ctx context.Context, messages []openai.ChatComplet
 
 	// Extract thinking from content
 	thinking := strings.TrimSpace(choice.Message.Content)
-	if thinking != "" {
-		logs.Info(thinking)
-	}
+	// if thinking != "" {
+	// 	log.Info().Msg(thinking)
+	// }
 
 	// Extract tool calls
 	var toolCalls []openai.ToolCall
 	var action string
-	
+
 	if len(choice.Message.ToolCalls) > 0 {
 		toolCalls = choice.Message.ToolCalls
 		// Format action string from tool call for logging
@@ -116,17 +116,17 @@ func (c *ModelClient) Request(ctx context.Context, messages []openai.ChatComplet
 }
 
 func printMetrics(lang string, firstToken *float64, thinkingEnd *float64, total float64) {
-	logs.Info("")
-	logs.Info(strings.Repeat("=", 50))
-	logs.Info("⏱️  " + helper.GetMessage("performance_metrics", lang))
-	logs.Info(strings.Repeat("-", 50))
+	log.Info().Msg("")
+	log.Info().Msg(strings.Repeat("=", 50))
+	log.Info().Msg("⏱️  " + helper.GetMessage("performance_metrics", lang))
+	log.Info().Msg(strings.Repeat("-", 50))
 
 	if firstToken != nil {
-		logs.Infof("%s: %.3fs", helper.GetMessage("time_to_first_token", lang), *firstToken)
+		log.Info().Msgf("%s: %.3fs", helper.GetMessage("time_to_first_token", lang), *firstToken)
 	}
 	if thinkingEnd != nil {
-		logs.Infof("%s: %.3fs", helper.GetMessage("time_to_thinking_end", lang), *thinkingEnd)
+		log.Info().Msgf("%s: %.3fs", helper.GetMessage("time_to_thinking_end", lang), *thinkingEnd)
 	}
-	logs.Infof("%s: %.3fs", helper.GetMessage("total_inference_time", lang), total)
-	logs.Info(strings.Repeat("=", 50))
+	log.Info().Msgf("%s: %.3fs", helper.GetMessage("total_inference_time", lang), total)
+	log.Info().Msg(strings.Repeat("=", 50))
 }
