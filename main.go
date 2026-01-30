@@ -16,6 +16,7 @@ import (
 	"github.com/samber/lo"
 	"github.com/sashabaranov/go-openai"
 	"github.com/spance/autoglm-go/constants"
+	"github.com/spance/autoglm-go/examples"
 	"github.com/spance/autoglm-go/phoneagent"
 	"github.com/spance/autoglm-go/phoneagent/definitions"
 	"github.com/spance/autoglm-go/phoneagent/helper"
@@ -236,7 +237,7 @@ func main() {
 		return
 	}
 
-	device, err := phoneagent.CreateDevice(config.DeviceType)
+	device, err := examples.CreateDevice(config.DeviceType)
 	if err != nil {
 		log.Error().Err(err).Msg("creating device failed")
 		return

@@ -2,12 +2,8 @@ package phoneagent
 
 import (
 	"context"
-	"fmt"
 
-	"github.com/spance/autoglm-go/constants"
-	"github.com/spance/autoglm-go/phoneagent/android"
 	"github.com/spance/autoglm-go/phoneagent/definitions"
-	"github.com/spance/autoglm-go/phoneagent/ios"
 )
 
 // DeviceOperator 定义设备操作接口
@@ -42,15 +38,4 @@ type DeviceManager interface {
 type Device interface {
 	DeviceOperator
 	DeviceManager
-}
-
-func CreateDevice(deviceType string) (Device, error) {
-	switch deviceType {
-	case constants.ADB:
-		return &android.ADBDevice{}, nil
-	case constants.IOS:
-		return &ios.IOSDevice{}, nil
-	default:
-		return nil, fmt.Errorf("unknown device type: %v", deviceType)
-	}
 }
