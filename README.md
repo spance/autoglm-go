@@ -3,150 +3,224 @@
 [![Go Version](https://img.shields.io/badge/Go-1.23+-blue.svg)](https://golang.org)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-AutoGLM-Go 是 Open-AutoGLM 项目的 Go 语言重写版本，专注于 Android 设备的自动化操作。本项目使用 AI 模型来理解和执行手机操作任务，通过 ADB (Android Debug Bridge) 与 Android 设备进行交互。
+A production-ready Go library for AI-driven Android device automation. Programmatically execute complex user interactions on Android devices through natural language instructions via LLM function calling.
 
-> **注意**: 本项目是原 [Open-AutoGLM](https://github.com/zai-org/Open-AutoGLM) 项目的 Go 重写版本，与原项目的主要区别是：
-> - 目前仅支持 Android 设备，不支持鸿蒙和 iOS 设备
-> - 使用 Go 语言重写，提供更好的性能和更简单的部署
-> - 保留了原项目的核心功能和 AI 驱动的自动化能力
+This project is forked from [ZoroSpace/autoglm-go](https://github.com/ZoroSpace/autoglm-go), which originated from [zai-org/Open-AutoGLM](https://github.com/zai-org/Open-AutoGLM).
 
-## 功能特点
+## Overview
 
-- 🤖 AI 驱动的手机自动化操作
-- 📱 支持 Android 设备（通过 ADB）
-- 🖼️ 屏幕截图和 UI 元素识别
-- 📲 应用程序启动和操作
-- 🌐 支持本地和远程设备连接
-- 🛠️ 丰富的命令行工具
+AutoGLM-Go provides a complete abstraction layer for autonomous Android device control using vision-language models. The library handles:
 
-## 系统要求
-- Go 1.23 或更高版本
-- Android SDK Platform Tools (ADB)
-- Android 设备或模拟器（已启用开发者选项和 USB 调试）
+- Screenshot capture and vision processing
+- AI-powered action planning from natural language
+- Atomic device operations (tap, swipe, type, etc.)
+- Stateful conversation management for multi-step task execution
+- Structured logging with step tracking
+- Both local ADB and remote device connections
 
-## 环境准备
-- 见 [原项目](https://github.com/zai-org/Open-AutoGLM) **Android 环境准备**
-- 在 [智谱大模型平台](https://bigmodel.cn) 注册账号并获取 API 密钥
-
-## 安装步骤
-
-### 1. 克隆仓库
+## Installation
 
 ```bash
-git clone https://github.com/ZoroSpace/autoglm-go.git
-cd autoglm-go
+go get github.com/spance/autoglm-go
 ```
 
-### 2. 编译项目
+## Core Architecture
 
-```bash
-go build -o autoglm-go main.go
+### Interfaces
+
+```go
+type Device interface {
+    DeviceOperator  // Screenshot, touch, input operations
+    DeviceManager   // Connection management, device enumeration
+}
+
+type DeviceOperator interface {
+    GetScreenshot(ctx context.Context, deviceID string) (*definitions.Screenshot, error)
+    GetCurrentApp(ctx context.Context, deviceID string) (string, error)
+    Tap(ctx context.Context, x, y int, deviceID string) error
+    Swipe(ctx context.Context, startX, startY, endX, endY int, deviceID string) error
+    TypeText(ctx context.Context, text, deviceID string) error
+    LaunchApp(ctx context.Context, appName, deviceID string) (bool, error)
+    // ... additional operations
+}
 ```
 
-## 使用方法
+### Agent Loop
 
-### 基本用法
-
-```bash
-# 指定任务
-./autoglm-go --apikey xxxxx "打开抖音并搜索美食视频"
-
-# 交互模式
-./autoglm-go --apikey xxxxx
+```go
+agent := phoneagent.NewPhoneAgent(device, modelConfig, agentConfig)
+result, err := agent.Run(ctx, "search for iPhone 15 and add to cart")
 ```
 
-### 设备管理
+The agent implements an iterative cycle:
+1. Capture device screenshot
+2. Send screenshot + conversation history to LLM
+3. Parse LLM function calls into structured actions
+4. Execute actions via device interface
+5. Repeat until task completion or max steps reached
 
-```bash
-# 查看当前已连接的设备列表
-./autoglm-go --list-devices
+## Usage
 
-# 连接指定IP地址的远程设备
-./autoglm-go --connect 192.168.1.100:5555
+### Basic Integration
 
-# 断开与指定设备的连接
-./autoglm-go --disconnect 192.168.1.100:5555
-```
-更多设备管理命令请参考 main.go 源文件中的实现。
+```go
+import "github.com/spance/autoglm-go/phoneagent"
 
+// Create device instance
+device := &android.ADBDevice{}
 
-### 应用程序支持
+// Configure LLM
+modelConfig := &definitions.ModelConfig{
+    BaseURL: "https://api.openai.com/v1",
+    Model:   "gpt-4-vision",
+    APIKey:  os.Getenv("OPENAI_API_KEY"),
+}
 
-```bash
-# 获取当前支持的应用程序列表
-./autoglm-go --list-apps
-```
+// Configure agent behavior
+agentConfig := &definitions.AgentConfig{
+    DeviceID:  "emulator-5554",
+    MaxSteps:  100,
+    Lang:      "en",
+}
 
-## 配置选项
-
-| 选项 | 环境变量 | 默认值 | 描述 |
-|------|----------|--------|------|
-| `--base-url` | `PHONE_AGENT_BASE_URL` | `https://open.bigmodel.cn/api/paas/v4` | 模型 API 基础 URL |
-| `--model` | `PHONE_AGENT_MODEL` | `autoglm-phone` | 模型名称 |
-| `--apikey` | `PHONE_AGENT_API_KEY` | `EMPTY` | API 密钥 |
-| `--max-steps` | `PHONE_AGENT_MAX_STEPS` | `100` | 每个任务的最大步数 |
-| `--device-id` | `PHONE_AGENT_DEVICE_ID` | - | ADB 设备 ID |
-| `--lang` | `PHONE_AGENT_LANG` | `cn` | 系统提示语言 (cn 或 en) |
-
-## 支持的应用程序
-
-本项目支持大量 Android 应用程序的自动化操作，包括但不限于：
-
-- 社交应用：微信、QQ、微博、抖音等
-- 购物应用：淘宝、京东、拼多多等
-- 视频应用：哔哩哔哩、爱奇艺、腾讯视频等
-- 音乐应用：网易云音乐、QQ音乐等
-- 生活服务：支付宝、美团、饿了么等
-
-使用 `--list-apps` 命令可以查看完整的应用程序列表。
-
-## 工作原理
-
-1. **截图获取**: 通过 ADB 获取设备当前屏幕截图
-2. **UI 分析**: 使用 AI 模型分析屏幕内容和 UI 元素
-3. **决策制定**: 根据任务和当前屏幕状态决定下一步操作
-4. **操作执行**: 通过 ADB 执行点击、滑动、输入等操作
-5. **循环迭代**: 重复上述过程直到任务完成
-
-## 示例
-
-```bash
-# 社交应用操作
-./autoglm-go --apikey xxxxx "打开微信，给张三发消息说我今天晚点到"
-
-# 购物应用操作
-./autoglm-go --apikey xxxxx "打开淘宝搜索iPhone 15并加入购物车"
-
-# 视频应用操作
-./autoglm-go --apikey xxxxx "打开抖音搜索美食视频并点赞前三个"
-
-# 系统设置操作
-./autoglm-go --apikey xxxxx "打开设置将屏幕亮度调整到50%"
+// Create and run agent
+agent := phoneagent.NewPhoneAgent(device, modelConfig, agentConfig)
+result, err := agent.Run(ctx, "your task description")
 ```
 
-## 开发
+### Device Management
 
-### 项目结构
+```go
+// Connect to remote device via TCP/IP
+_, err := device.Connect(ctx, "192.168.1.100:5555")
 
-```
-autoglm-go/
-├── main.go              # 主程序入口
-├── constants/           # 常量定义
-│   ├── apps.go         # 支持的应用程序包名
-│   ├── device.go       # 设备相关常量
-│   ├── i18n.go         # 国际化文本
-│   └── prompt.go       # AI 提示词
-├── phoneagent/          # 核心功能实现
-│   ├── agent.go        # 代理主逻辑
-│   ├── android/        # Android 设备实现
-│   ├── definitions/    # 数据结构定义
-│   ├── helper/         # 辅助函数
-│   ├── interface.go    # 接口定义
-│   └── llm/            # LLM 客户端
-├── utils/              # 工具函数
-└── scripts/            # 脚本文件
+// List connected devices
+devices, err := device.ListDevices(ctx)
+
+// Get device info
+info, err := device.GetDeviceInfo(ctx, "device-id")
 ```
 
-## 致谢
+### Step-by-Step Execution
 
-- [Open-AutoGLM](https://github.com/zai-org/Open-AutoGLM) - 原始项目
+For fine-grained control:
+
+```go
+// Single execution step
+result, err := agent.Step(ctx, "initial task prompt")
+
+// Inspect result
+if result.Finished {
+    fmt.Println("Task completed:", result.Message)
+}
+
+// Continue with follow-up steps
+result, err := agent.Step(ctx, "")
+```
+
+## Configuration
+
+### Model Configuration
+
+```go
+type ModelConfig struct {
+    BaseURL string  // LLM API endpoint
+    Model   string  // Model identifier
+    APIKey  string  // Authentication token
+}
+```
+
+Supports OpenAI-compatible APIs. Tested with:
+- OpenAI GPT-4V
+- Claude Opus (via OpenAI-compatible proxy)
+- Custom LLM servers with compatible API
+
+### Agent Configuration
+
+```go
+type AgentConfig struct {
+    DeviceID  string
+    MaxSteps  int    // Max iterations per task
+    Lang      string // "en" or "cn" for system prompts
+}
+```
+
+## Coordinate System
+
+All coordinates use normalized 0-999 range regardless of actual screen resolution. The library automatically converts to absolute device pixels:
+
+```
+(0, 0) ----------- (999, 0)
+  |                   |
+  |   normalized      |
+  |   0-999 range     |
+  |                   |
+(0, 999) -------- (999, 999)
+```
+
+This abstraction is transparent to users - provide coordinates in 0-999 range, the library handles conversion.
+
+## Structured Logging
+
+Logging uses [zerolog](https://github.com/rs/zerolog) for structured output with step tracking:
+
+```
+log.Debug().Int("step", 1).Msgf("💭 thinking")
+log.Debug().Int("step", 1).Msgf("🎯 parsed action: Tap")
+log.Error().Int("step", 2).Err(err).Msg("failed to execute action")
+```
+
+## Extending
+
+### Custom Device Implementation
+
+Implement the `Device` interface to support additional platforms:
+
+```go
+type CustomDevice struct {
+    // your implementation
+}
+
+func (d *CustomDevice) GetScreenshot(ctx context.Context, deviceID string) (*definitions.Screenshot, error) {
+    // implementation
+}
+
+// ... implement remaining interface methods
+```
+
+### Custom LLM Models
+
+The library uses OpenAI-compatible APIs. Any model exposing that interface is supported:
+
+- Modify `modelConfig.BaseURL` to point to your LLM endpoint
+- Ensure function calling is supported by the model
+- Update system prompts in `constants/prompt.go` if needed
+
+## Example: App Automation
+
+See [examples/](./examples) for reference implementations including Android ADB device control.
+
+## Limitations
+
+- Android device support via ADB only
+- Requires target device to have USB debugging enabled
+- LLM must support vision input and function calling
+- Performance depends on LLM response latency and device screenshot speed
+
+## Performance Considerations
+
+- Screenshot capture: ~100-300ms per device
+- LLM inference: Model-dependent (typically 1-5s for vision models)
+- Action execution: ~50-200ms per operation
+- Overall task time: linear in number of steps required
+
+## License
+
+Apache License 2.0
+
+See [LICENSE](LICENSE) for details.
+
+## Acknowledgments
+
+- [zai-org/Open-AutoGLM](https://github.com/zai-org/Open-AutoGLM) - Original project
+- [ZoroSpace/autoglm-go](https://github.com/ZoroSpace/autoglm-go) - Previous Go implementation
