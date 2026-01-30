@@ -128,7 +128,7 @@ func (r *PhoneAgent) ExecuteStep(ctx context.Context, userPrompt string, isFirst
 
 	// user prompt
 	r.State = append(r.State,
-		helper.CreateUserMessage(textContent, &screenshot.Base64Data),
+		helper.CreateUserMessage(textContent, screenshot),
 	)
 
 	// print user message

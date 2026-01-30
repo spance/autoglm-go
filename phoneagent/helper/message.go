@@ -1,11 +1,13 @@
 package helper
 
 import (
-	"fmt"
+	"bytes"
+	"encoding/base64"
 
 	"github.com/rs/zerolog/log"
 	"github.com/sashabaranov/go-openai"
 	"github.com/spance/autoglm-go/constants"
+	"github.com/spance/autoglm-go/phoneagent/definitions"
 	"github.com/spance/autoglm-go/utils"
 )
 
@@ -23,7 +25,7 @@ func CreateAssistantMessage(content string) openai.ChatCompletionMessage {
 	}
 }
 
-func CreateUserMessage(text string, imageBase64 *string) openai.ChatCompletionMessage {
+func CreateUserMessage(text string, screenshot *definitions.Screenshot) openai.ChatCompletionMessage {
 	msg := openai.ChatCompletionMessage{
 		Role: openai.ChatMessageRoleUser,
 		MultiContent: []openai.ChatMessagePart{
@@ -33,15 +35,29 @@ func CreateUserMessage(text string, imageBase64 *string) openai.ChatCompletionMe
 			},
 		},
 	}
-	// 如果有图片，加入 MultiContent
-	if imageBase64 != nil && *imageBase64 != "" {
+
+	var imageURL bytes.Buffer
+	imageURL.WriteString("data:image/png;base64,")
+
+	// 优先使用二进制数据，其次使用 Base64Data
+	if len(screenshot.BinaryData) > 0 {
+		encoder := base64.NewEncoder(base64.StdEncoding, &imageURL)
+		encoder.Write(screenshot.BinaryData)
+		encoder.Close()
+	} else if screenshot.Base64Data != "" {
+		// 使用 Base64 数据
+		imageURL.WriteString(screenshot.Base64Data)
+	}
+
+	if imageURL.Len() > 0 {
 		msg.MultiContent = append(msg.MultiContent, openai.ChatMessagePart{
 			Type: openai.ChatMessagePartTypeImageURL,
 			ImageURL: &openai.ChatMessageImageURL{
-				URL: fmt.Sprintf("data:image/png;base64,%s", *imageBase64),
+				URL: imageURL.String(),
 			},
 		})
 	}
+
 	return msg
 }
 

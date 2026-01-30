@@ -18,6 +18,7 @@ type DeviceInfo struct {
 
 // Screenshot represents a captured screenshot.
 type Screenshot struct {
+	BinaryData  []byte `json:"binary_data,omitempty"`
 	Base64Data  string `json:"base64_data"`
 	Width       int    `json:"width"`
 	Height      int    `json:"height"`
