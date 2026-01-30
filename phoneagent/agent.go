@@ -11,6 +11,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/sashabaranov/go-openai"
+	"github.com/spance/autoglm-go/constants"
 	"github.com/spance/autoglm-go/phoneagent/definitions"
 	"github.com/spance/autoglm-go/phoneagent/helper"
 	"github.com/spance/autoglm-go/phoneagent/llm"
@@ -275,7 +276,13 @@ func (r *PhoneAgent) handleLaunch(ctx context.Context, action helper.Action, scr
 			Message:      "No app name specified",
 		}, nil
 	}
-	_, err := r.Device.LaunchApp(ctx, appName, r.AgentConfig.DeviceID)
+
+	packageName, ok := constants.GetPackageByAlias(appName)
+	if !ok || len(packageName) == 0 {
+		packageName = appName // assume it's a package name
+	}
+
+	_, err := r.Device.LaunchApp(ctx, packageName, r.AgentConfig.DeviceID)
 	if err != nil {
 		log.Error().Int("step", r.StepCount).Err(err).Msg("failed to launch app")
 		return helper.ActionResult{

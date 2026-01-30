@@ -65,8 +65,10 @@ func PrintChatMessage(msg *openai.ChatCompletionMessage, stepCount int) {
 }
 
 func BuildScreenInfo(currentApp string) string {
-	info := map[string]interface{}{
-		"current_app": currentApp,
+	appName, _ := constants.GetAliasByPackage(currentApp)
+	info := map[string]any{
+		"current_app":      currentApp,
+		"current_app_name": appName,
 	}
 	return utils.JsonString(info)
 }
