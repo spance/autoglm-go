@@ -80,12 +80,25 @@ func PrintChatMessage(msg *openai.ChatCompletionMessage, stepCount int) {
 	}
 }
 
-func BuildScreenInfo(currentApp string) string {
+func BuildScreenInfo(currentApp string, screenshot *definitions.Screenshot) string {
 	appName, _ := constants.GetAliasByPackage(currentApp)
+
 	info := map[string]any{
 		"current_app":      currentApp,
 		"current_app_name": appName,
 	}
+
+	// 判断屏幕方向
+	if screenshot != nil {
+		var orientation string
+		if screenshot.Width > screenshot.Height {
+			orientation = "landscape"
+		} else {
+			orientation = "portrait"
+		}
+		info["screen_orientation"] = orientation
+	}
+
 	return utils.JsonString(info)
 }
 

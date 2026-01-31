@@ -28,6 +28,7 @@ type PhoneAgent struct {
 }
 
 func NewPhoneAgent(device Device, modelConfig *definitions.ModelConfig, agentConfig *definitions.AgentConfig) *PhoneAgent {
+	agentConfig.InitSystemPrompt()
 	result := &PhoneAgent{
 		ModelConfig: modelConfig,
 		AgentConfig: agentConfig,
@@ -107,7 +108,7 @@ func (r *PhoneAgent) ExecuteStep(ctx context.Context, userPrompt string, isFirst
 		)
 
 		if len(currentApp) > 0 {
-			screenInfo := helper.BuildScreenInfo(currentApp)
+			screenInfo := helper.BuildScreenInfo(currentApp, screenshot)
 			textContent = fmt.Sprintf("%s\n\n%s", userPrompt, screenInfo)
 		} else {
 			textContent = userPrompt
@@ -119,7 +120,7 @@ func (r *PhoneAgent) ExecuteStep(ctx context.Context, userPrompt string, isFirst
 			sb.WriteString("\n\n")
 		}
 		if len(currentApp) > 0 {
-			screenInfo := helper.BuildScreenInfo(currentApp)
+			screenInfo := helper.BuildScreenInfo(currentApp, screenshot)
 			sb.WriteString("** Screen Info **\n\n")
 			sb.WriteString(screenInfo)
 		}

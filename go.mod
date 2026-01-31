@@ -9,6 +9,7 @@ require (
 	github.com/samber/lo v1.52.0
 	github.com/sashabaranov/go-openai v1.41.2
 	github.com/spf13/cobra v1.10.2
+	github.com/valyala/fasttemplate v1.2.2
 )
 
 require (
@@ -22,6 +23,7 @@ require (
 	github.com/mattn/go-isatty v0.0.19 // indirect
 	github.com/spf13/pflag v1.0.9 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
+	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	golang.org/x/arch v0.0.0-20210923205945-b76863e36670 // indirect
 	golang.org/x/sys v0.24.0 // indirect
 	golang.org/x/text v0.22.0 // indirect
